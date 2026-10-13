@@ -1,0 +1,20 @@
+{
+  "name": "reward-quest-server",
+  "version": "1.0.0",
+  "description": "Backend for daily reward quest planner",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "morgan": "^1.10.0",
+    "nanoid": "^5.0.0"
+  },
+  "devDependencies": {}
+}
