@@ -1,4 +1,4 @@
-import client from './client';
+import * as store from '../store';
 
-export const getUser = () => client.get('/user').then(r => r.data);
-export const redeemCoupon = () => client.post('/user/redeem-coupon').then(r => r.data);
+export const getUser = async () => store.getUser();
+export const redeemCoupon = async () => store.redeemCoupon();

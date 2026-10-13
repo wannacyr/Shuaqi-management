@@ -1,6 +1,4 @@
-import client from './client';
+import * as store from '../store';
 
-export const getTransactions = (limit = 100) =>
-  client.get('/points/transactions', { params: { limit } }).then(r => r.data);
-
-export const getDailyPoints = () => client.get('/points/daily').then(r => r.data);
+export const getTransactions = async (limit = 100) => store.getTransactions(limit);
+export const getDailyPoints = async () => store.getDailyPoints();

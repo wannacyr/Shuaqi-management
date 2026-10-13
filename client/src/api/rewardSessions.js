@@ -1,7 +1,4 @@
-import client from './client';
+import * as store from '../store';
 
-export const createRewardSession = (dailyPlanId, durationSeconds) =>
-  client.post('/reward-sessions', { daily_plan_id: dailyPlanId, duration_seconds: durationSeconds }).then(r => r.data);
-
-export const listRewardSessions = (date) =>
-  client.get('/reward-sessions', { params: date ? { date } : {} }).then(r => r.data);
+export const createRewardSession = async (dailyPlanId, durationSeconds) => store.createRewardSession(dailyPlanId, durationSeconds);
+export const listRewardSessions = async (date) => store.listRewardSessions(date);

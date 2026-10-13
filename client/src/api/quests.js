@@ -1,6 +1,6 @@
-import client from './client';
+import * as store from '../store';
 
-export const listQuests = () => client.get('/quests').then(r => r.data);
-export const createQuest = (data) => client.post('/quests', data).then(r => r.data);
-export const updateQuest = (id, data) => client.put(`/quests/${id}`, data).then(r => r.data);
-export const deleteQuest = (id) => client.delete(`/quests/${id}`);
+export const listQuests = async () => store.listQuests();
+export const createQuest = async (data) => store.createQuest(data);
+export const updateQuest = async (id, data) => store.updateQuest(id, data);
+export const deleteQuest = async (id) => store.deleteQuest(id);
