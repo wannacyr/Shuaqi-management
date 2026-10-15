@@ -84,10 +84,14 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
     name: form.name,
     description: form.description,
     icon: iconForType(form.name),
-    daily_limit_minutes: form.daily_limit_minutes,
+    daily_limit_minutes: Number(form.daily_limit_minutes) || 0,
     is_free: isFree,
     ...buildRepeatPayload(form.repeat, form.repeat_until || null),
-    conditions: isFree ? [] : form.conditions.filter((c) => c.title.trim()),
+    conditions: isFree
+      ? []
+      : form.conditions
+          .filter((c) => c.title.trim())
+          .map((c) => ({ ...c, duration_minutes: Number(c.duration_minutes) || 0 })),
   });
 
   // 选择了重复时必须选择结束日期，且不能早于今天
@@ -171,7 +175,7 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
                 type="number"
                 min="1"
                 value={form.daily_limit_minutes}
-                onChange={(e) => setForm({ ...form, daily_limit_minutes: Number(e.target.value) })}
+                onChange={(e) => setForm({ ...form, daily_limit_minutes: e.target.value === '' ? '' : Number(e.target.value) })}
                 className="w-full px-3 py-2 pr-20 border border-slate-300 rounded-lg"
               />
               {form.daily_limit_minutes > 0 && (
@@ -241,7 +245,7 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
                         type="number"
                         min="1"
                         value={c.duration_minutes}
-                        onChange={(e) => updateCondition(idx, { duration_minutes: Number(e.target.value) })}
+                        onChange={(e) => updateCondition(idx, { duration_minutes: e.target.value === '' ? '' : Number(e.target.value) })}
                         className="w-28 px-2 py-2 pr-14 border border-slate-300 rounded-lg"
                       />
                       {c.duration_minutes > 0 && (
