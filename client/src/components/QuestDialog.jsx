@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, X, Save, Sparkles } from 'lucide-react';
 import { QUEST_TYPES, iconForType } from '../utils/questTypes';
 import { todayStr } from '../utils/date';
+import { rewardPoints, conditionPoints } from '../store';
 
 const REPEAT_OPTIONS = [
   { value: 'none', label: '不重复' },
@@ -165,13 +166,20 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">时长（分钟）</label>
-            <input
-              type="number"
-              min="1"
-              value={form.daily_limit_minutes}
-              onChange={(e) => setForm({ ...form, daily_limit_minutes: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                min="1"
+                value={form.daily_limit_minutes}
+                onChange={(e) => setForm({ ...form, daily_limit_minutes: Number(e.target.value) })}
+                className="w-full px-3 py-2 pr-20 border border-slate-300 rounded-lg"
+              />
+              {form.daily_limit_minutes > 0 && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-violet-600 pointer-events-none">
+                  积分+{rewardPoints(form.daily_limit_minutes)}
+                </span>
+              )}
+            </div>
           </div>
 
           <div>
@@ -187,6 +195,7 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
             </select>
             {form.repeat !== 'none' && (
               <div className="mt-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">重复直到</label>
                 <input
                   type="date"
                   min={todayStr()}
@@ -227,13 +236,20 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
                     className="flex-1 px-3 py-2 border border-slate-300 rounded-lg"
                   />
                   <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min="1"
-                      value={c.duration_minutes}
-                      onChange={(e) => updateCondition(idx, { duration_minutes: Number(e.target.value) })}
-                      className="w-20 px-2 py-2 border border-slate-300 rounded-lg"
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        value={c.duration_minutes}
+                        onChange={(e) => updateCondition(idx, { duration_minutes: Number(e.target.value) })}
+                        className="w-28 px-2 py-2 pr-14 border border-slate-300 rounded-lg"
+                      />
+                      {c.duration_minutes > 0 && (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-violet-600 pointer-events-none whitespace-nowrap">
+                          积分+{conditionPoints(c.duration_minutes)}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-slate-400">分钟</span>
                   </div>
                   <button

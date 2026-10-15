@@ -51,3 +51,14 @@ body {
   border-radius: 1px;
   animation: confetti-pop 0.5s ease-out forwards;
 }
+
+/* 隐藏 number 输入框原生 spinner，避免与输入框内右侧积分提示重叠 */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

@@ -162,6 +162,7 @@ export function TodayView() {
                 onToggleCondition={(c) => handleToggle(plan, c)}
                 onUnlock={handleUnlock}
                 onEdit={handleEdit}
+                onDelete={handleDelete}
               />
             ))}
           </div>
