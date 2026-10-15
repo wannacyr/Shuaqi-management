@@ -1,16 +1,15 @@
-# React + Vite
+# client（前端）
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+本应用的完整实现为纯前端（Vite + React 19），无后端服务。
 
-Currently, two official plugins are available:
+- 数据层：`src/store/`（`db.js` 负责 localStorage 持久化与种子数据，`index.js` 承载全部业务逻辑）
+- 接口层：`src/api/` 为 store 的封装，供 context / 页面调用
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev       # 开发（http://localhost:5173）
+npm run build     # 构建到 dist/
+npm run preview   # 预览构建产物
+```
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+详见根目录 [README](../README.md)。

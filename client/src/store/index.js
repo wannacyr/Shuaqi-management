@@ -341,6 +341,25 @@ function generateDailyPlan(questId, dateStr, isRewardPool = false) {
   return planId;
 }
 
+// 顺延：把源计划的 dayend 状态（计划状态 + 各条件勾选）复制到新计划
+function carryOverPlanState(srcPlanId, dstPlanId, status) {
+  const db = getDb();
+  const srcCcs = db.condition_completions.filter((cc) => cc.daily_plan_id === srcPlanId);
+  for (const srcCc of srcCcs) {
+    const dstCc = db.condition_completions.find(
+      (cc) => cc.daily_plan_id === dstPlanId && cc.condition_id === srcCc.condition_id
+    );
+    if (dstCc) {
+      dstCc.completed = srcCc.completed;
+      dstCc.completed_at = srcCc.completed_at;
+    }
+  }
+  const dstPlan = db.daily_plans.find((p) => p.id === dstPlanId);
+  if (dstPlan && (status === 'locked' || status === 'unlocked')) {
+    dstPlan.status = status;
+  }
+}
+
 function syncPlanConditions(planId) {
   const db = getDb();
   const plan = db.daily_plans.find((p) => p.id === planId);
@@ -413,17 +432,18 @@ function ensurePlansForDate(dateStr) {
     syncPlanConditions(p.id);
   }
 
-  // 3. 昨日 locked 的关卡移入奖励池
+  // 3. 昨日未完成（locked / unlocked）的关卡顺延到今日奖励池，状态维持昨日 dayend 状态
   const yesterday = new Date(dateStr);
   yesterday.setDate(yesterday.getDate() - 1);
   const yestStr = formatDate(yesterday);
-  const lockedQuestIds = [...new Set(
-    db.daily_plans
-      .filter((p) => p.plan_date === yestStr && p.status === 'locked')
-      .map((p) => p.quest_id)
-  )];
-  for (const questId of lockedQuestIds) {
-    generateDailyPlan(questId, dateStr, true);
+  const unfinishedPlans = db.daily_plans.filter(
+    (p) => p.plan_date === yestStr && (p.status === 'locked' || p.status === 'unlocked')
+  );
+  for (const srcPlan of unfinishedPlans) {
+    const existing = db.daily_plans.find((p) => p.quest_id === srcPlan.quest_id && p.plan_date === dateStr);
+    if (existing) continue;
+    const newPlanId = generateDailyPlan(srcPlan.quest_id, dateStr, true);
+    carryOverPlanState(srcPlan.id, newPlanId, srcPlan.status);
   }
 }
 
@@ -452,11 +472,15 @@ export function toggleCondition(planId, conditionId) {
   const condition = db.conditions.find((c) => c.id === conditionId);
   if (!condition) throw new Error('条件不存在');
 
+  const plan = db.daily_plans.find((p) => p.id === planId);
+  if (!plan) throw new Error('计划不存在');
+  const today = formatDate(new Date());
+  if (plan.plan_date !== today) throw new Error('只能完成当天的条件');
+
   const newCompleted = cc.completed ? 0 : 1;
   cc.completed = newCompleted;
   cc.completed_at = newCompleted ? new Date().toISOString() : null;
 
-  const plan = db.daily_plans.find((p) => p.id === planId);
   const points = conditionPoints(condition.duration_minutes);
 
   if (newCompleted) {

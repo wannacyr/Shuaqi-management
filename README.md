@@ -1,12 +1,16 @@
-# 每日奖励关卡规划器（Reward Quest Planner）
+# 每日奖励关卡规划器（Daily Playbook）
 
 一个以「奖励关卡」为核心的日程与自律工具：把每日待办事项作为**前置条件**，完成全部条件后解锁当日的**奖励**。完成条件和获得奖励都能累计积分，并通过日历、徽章、积分明细等视图反馈进度。
+
+**纯前端应用**：无后端、无数据库服务，全部数据存储在浏览器 localStorage 中，可作为静态站点直接部署。
 
 ## ✨ 功能特性
 
 - **奖励关卡**：每个关卡包含一个或多个前置条件（如「阅读 30 分钟」），完成全部条件后解锁奖励。
+- **仅当天可操作**：只有当天的条件可以勾选；查看历史/未来日期的卡片时，条件复选框与操作按钮自动禁用并显示提示。
+- **完成确认弹卡**：勾选最后一个未完成条件时弹出确认（「真的完事了准备奖励自己吗」）——可立即开始奖励、稍后手动开始（再沉淀一会儿）、或撤销勾选（手滑了）。
+- **奖励池（跨日顺延）**：当天未完成的关卡（条件未做完，或已解锁但未享受）自动顺延到次日奖励池，并完整保留前一天的勾选进度与解锁状态；已享受的关卡不顺延。
 - **积分系统**：完成条件、获得奖励均累计积分（规则见下方）。
-- **奖励池（跨日积累）**：当天未完成的关卡会顺延到次日的奖励池，奖励不丢失。
 - **徽章成就**：共 4 枚徽章，解锁每枚奖励 +20 积分。
 - **日历视图**：以日历形式查看历史完成情况。
 - **自由奖励券**：允许创建 0 条件关卡，但需要消耗自由奖励券兜底；无券且无条件时拒绝创建。
@@ -16,94 +20,58 @@
 
 | 层 | 技术 |
 |---|---|
-| 前端 | Vite + React 19 + React Router 7 + Tailwind CSS 4 + Recharts + lucide-react + axios |
-| 后端 | Node.js + Express 4 + SQLite（sqlite3） |
-| 其他 | cors / morgan / dotenv / nanoid / date-fns |
+| 框架 | Vite + React 19 |
+| 路由 | React Router 7（HashRouter，兼容静态托管） |
+| 样式 | Tailwind CSS 4 + lucide-react |
+| 图表 | Recharts |
+| 数据 | 浏览器 localStorage（`client/src/store/` 本地数据层） |
 
 ## 📁 目录结构
 
 ```
 .
-├── client/                      # 前端（Vite + React）
-│   └── src/
-│       ├── api/                 # REST API 封装（quests / dailyPlans / points / rewardSessions / user）
-│       ├── components/          # QuestCard、QuestDialog、Timer、CalendarHeatmap、LevelBadge 等
-│       ├── context/             # 全局状态（QuestContext / UserContext）
-│       ├── pages/               # TodayView、StatsView、PointsView、BadgesView、RewardTimer
-│       ├── hooks/               # useTimer 等自定义 Hook
-│       └── utils/               # calc / date / questTypes 工具
-├── server/                      # 后端（Express + SQLite）
-│   ├── routes/                  # user / quests / dailyPlans / rewardSessions / points
-│   ├── db.js                    # 数据库连接与迁移
-│   ├── server.js                # 服务入口
-│   └── data.sqlite              # SQLite 数据库
-└── package.json                 # 根脚本（可并行启动前后端）
+├── client/
+│   ├── src/
+│   │   ├── api/           # 数据接口层（quests / dailyPlans / points / rewardSessions / user），内部调用 store
+│   │   ├── store/         # 数据层：db.js（localStorage 读写与种子数据）、index.js（全部业务逻辑）
+│   │   ├── components/    # QuestCard、QuestDialog、CompleteConfirmDialog、Timer、CalendarHeatmap、LevelBadge 等
+│   │   ├── context/       # 全局状态（QuestContext / UserContext）
+│   │   ├── pages/         # TodayView、StatsView、PointsView、BadgesView、RewardTimer
+│   │   ├── hooks/         # useTimer 等自定义 Hook
+│   │   └── utils/         # calc / date / questTypes 工具
+│   ├── public/
+│   ├── dist/              # 构建产物（用于部署）
+│   └── vite.config.js
+└── README.md
 ```
 
-## 🚀 快速开始
-
-### 1. 安装依赖
-
-在项目根目录执行（会自动安装根 / 前端 / 后端三处依赖）：
+## 🚀 本地开发
 
 ```bash
-npm run install:all
-```
-
-或分别安装：
-
-```bash
-npm install
-cd server && npm install
-cd ../client && npm install
-```
-
-### 2. 启动
-
-**一键并行启动前后端（推荐）：**
-
-```bash
-npm run dev
-```
-
-**分别手动启动：**
-
-```bash
-# 后端（http://localhost:3001）
-cd server
-npm run dev          # 或 node server.js
-
-# 前端（http://localhost:5173）
 cd client
-npm run dev          # 或 npm run build && npm run preview
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-### 3. 打开页面
+构建与本地预览：
 
-浏览器访问 <http://localhost:5173/>，标题显示「每日奖励关卡规划器」即成功。
+```bash
+npm run build      # 产物输出到 client/dist
+npm run preview    # 预览构建产物（默认 http://localhost:4173）
+```
 
-## 🔌 端口
+## ☁️ 部署（Cloudflare Pages）
 
-| 服务 | 地址 |
-|---|---|
-| 前端（Vite） | <http://localhost:5173> |
-| 后端（Express） | <http://localhost:3001> |
+1. `cd client && npm run build`
+2. Cloudflare 控制台 → **Workers & Pages → Create apps → Pages → Upload assets**
+3. 上传 `client/dist` 文件夹，获得永久 `*.pages.dev` 链接
 
-> 后端端口可通过环境变量 `PORT` 覆盖，默认 `3001`。
+## 💾 数据存储
 
-## 📡 API 概览
-
-所有业务接口前缀为 `/api`。
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | `/api/health` | 健康检查 |
-| GET / POST | `/api/quests` | 查询 / 创建奖励关卡 |
-| PUT / DELETE | `/api/quests/:id` | 更新 / 删除关卡（删除为软删除并清理当日及未来计划） |
-| GET | `/api/daily-plans?date=YYYY-MM-DD` | 按日期查询当日计划 |
-| GET / POST | `/api/reward-sessions` | 奖励计时会话 |
-| GET | `/api/points` | 积分明细 |
-| GET | `/api/user` | 用户信息（积分、徽章、自由奖励券等） |
+- 所有数据存储在浏览器 **localStorage**，键名 `reward_quest_db_v1`，以 JSON 结构模拟完整关系表（user / quests / conditions / daily_plans / reward_sessions / badges / levels / point_transactions 等）。
+- **按「浏览器 + 域名」隔离**：不同浏览器、不同设备、不同域名之间数据互不相通；每个访客打开站点都拥有独立的一份数据。
+- 关闭网页或浏览器不会丢失数据；清除站点数据会重置为初始种子（1 用户 / 6 等级 / 4 徽章）。
+- 查看数据：DevTools → Application → Local Storage → 对应源 → `reward_quest_db_v1`。
 
 ## 🎯 积分规则
 
@@ -124,14 +92,3 @@ npm run dev          # 或 npm run build && npm run preview
 | > 60 分钟 | +0 |
 
 **徽章解锁**：统一 +20 积分（共 4 枚徽章）。
-
-## 🗄️ 数据库
-
-- 文件：`server/data.sqlite`
-- 主要表：`user`、`quests`（含 `quest_date` 单日字段）、`conditions`、`daily_plans`、`completions`、`reward_sessions`、`badges`、`levels`
-- 种子数据：`badges` 4 条、`levels` 6 条
-- 备份：`server/data.sqlite.bak-20261013`
-
-## 📄 需求文档
-
-产品需求文档（PRD）：`C:\Users\PC\Desktop\Hyrox\Per\奖励关卡PRD.docx`

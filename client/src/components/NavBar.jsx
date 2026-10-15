@@ -18,7 +18,7 @@ export function NavBar() {
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2 font-bold text-violet-700">
           <Gamepad2 size={22} />
-          <span>奖励关卡</span>
+          <span>Daily Playbook</span>
         </div>
         <div className="flex items-center gap-1">
           {navItems.map(item => (

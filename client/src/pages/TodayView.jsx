@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { QuestCard } from '../components/QuestCard';
 import { QuestDialog } from '../components/QuestDialog';
+import { CompleteConfirmDialog } from '../components/CompleteConfirmDialog';
 import { useQuest } from '../context/QuestContext';
 import { useUser } from '../context/UserContext';
 import { todayStr } from '../utils/date';
@@ -9,9 +11,11 @@ import { Sparkles, Plus } from 'lucide-react';
 export function TodayView() {
   const { dailyPlans, loading, refreshDailyPlans, toggleCondition, unlockPlan, saveQuest, removeQuest } = useQuest();
   const { user, refreshUser } = useUser();
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuest, setEditingQuest] = useState(null);
   const [selectedDate, setSelectedDate] = useState(todayStr());
+  const [pendingComplete, setPendingComplete] = useState(null);
 
   useEffect(() => {
     refreshDailyPlans(selectedDate);
@@ -19,8 +23,52 @@ export function TodayView() {
   }, [selectedDate, refreshDailyPlans, refreshUser]);
 
   const handleToggle = async (plan, condition) => {
-    await toggleCondition(plan.id, condition.id);
-    refreshUser();
+    // 勾选「最后一个未完成条件」时，先弹确认卡，不直接落库
+    const isCompleting = !condition.completed;
+    const remaining = plan.conditions.filter((c) => !c.completed);
+    const isLastOne = isCompleting && remaining.length === 1 && remaining[0].id === condition.id;
+    if (isLastOne) {
+      setPendingComplete({ plan, condition });
+      return;
+    }
+    try {
+      await toggleCondition(plan.id, condition.id);
+      refreshUser();
+    } catch (err) {
+      alert(err.message || '操作失败');
+    }
+  };
+
+  // 等下，我手滑了：不勾选刚才的条件，退回弹出前界面
+  const handleConfirmOops = () => {
+    setPendingComplete(null);
+  };
+
+  // 再沉淀一会儿：勾选刚才的条件，返回弹出前界面
+  const handleConfirmSettle = async () => {
+    if (!pendingComplete) return;
+    try {
+      await toggleCondition(pendingComplete.plan.id, pendingComplete.condition.id);
+      refreshUser();
+    } catch (err) {
+      alert(err.message || '操作失败');
+    }
+    setPendingComplete(null);
+  };
+
+  // 开始奖励！：勾选刚才的条件，进入奖励关卡倒计时
+  const handleConfirmStart = async () => {
+    if (!pendingComplete) return;
+    const { plan, condition } = pendingComplete;
+    try {
+      await toggleCondition(plan.id, condition.id);
+      refreshUser();
+      setPendingComplete(null);
+      navigate(`/timer/${plan.id}`);
+    } catch (err) {
+      alert(err.message || '操作失败');
+      setPendingComplete(null);
+    }
   };
 
   const handleUnlock = async (plan) => {
@@ -126,6 +174,14 @@ export function TodayView() {
         initialQuest={editingQuest}
         freeCoupons={user?.free_coupons || 0}
         onSave={handleSave}
+      />
+
+      <CompleteConfirmDialog
+        open={!!pendingComplete}
+        questName={pendingComplete?.plan?.quest?.name}
+        onOops={handleConfirmOops}
+        onSettle={handleConfirmSettle}
+        onStart={handleConfirmStart}
       />
     </div>
   );

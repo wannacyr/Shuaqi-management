@@ -2,6 +2,7 @@ import { Lock, Unlock, CheckCircle, Play, Trophy, Sparkles, Pencil, Trash2, Game
 import { ProgressBar } from './ProgressBar';
 import { ConditionItem } from './ConditionItem';
 import { calcProgress } from '../utils/calc';
+import { todayStr } from '../utils/date';
 import { Link } from 'react-router-dom';
 
 const ICON_MAP = {
@@ -27,7 +28,8 @@ export function QuestCard({ plan, onToggleCondition, onUnlock, onEdit, onDelete 
   const config = statusConfig[status] || statusConfig.locked;
   const StatusIcon = config.icon;
   const progress = calcProgress(conditions);
-  const canStartTimer = status === 'unlocked';
+  const isToday = plan.plan_date === todayStr();
+  const canStartTimer = status === 'unlocked' && isToday;
   const allCompleted = conditions.length > 0 && conditions.every(c => c.completed);
   const TypeIcon = ICON_MAP[quest.icon] || Sparkles;
 
@@ -85,7 +87,7 @@ export function QuestCard({ plan, onToggleCondition, onUnlock, onEdit, onDelete 
               <ConditionItem
                 key={condition.id}
                 condition={condition}
-                disabled={status !== 'locked'}
+                disabled={status !== 'locked' || !isToday}
                 onToggle={onToggleCondition}
               />
             ))}
@@ -97,12 +99,18 @@ export function QuestCard({ plan, onToggleCondition, onUnlock, onEdit, onDelete 
         <div className="text-sm text-slate-500 mb-4">自由关卡，无需条件</div>
       )}
 
+      {!isToday && (
+        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+          这是 {plan.plan_date} 的卡片，只有当天的条件可以点击完成
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="text-xs text-slate-500">
           时长 {quest.daily_limit_minutes} 分钟 · 已享受 {Math.floor((used_seconds || 0) / 60)} 分钟
         </div>
         <div className="flex gap-2">
-          {status === 'locked' && allCompleted && (
+          {status === 'locked' && allCompleted && isToday && (
             <button
               onClick={() => onUnlock(plan)}
               className="px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700"
