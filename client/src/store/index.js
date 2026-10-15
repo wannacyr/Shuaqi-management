@@ -95,6 +95,10 @@ function checkBadges(eventType) {
     if (awarded) {
       db.user_badges.push({ badge_id: badge.id, awarded_at: new Date().toISOString() });
       addPoints('badge', 20, `获得徽章：${badge.name}`, badge.id);
+      // 通知前端弹出徽章激励卡（BadgeToast 监听此事件）
+      window.dispatchEvent(new CustomEvent('rewardquest:badge-earned', {
+        detail: { name: badge.name, description: badge.description, points: 20 },
+      }));
     }
   }
 }
@@ -158,7 +162,7 @@ export function listQuests() {
 
 export function createQuest(data) {
   const db = getDb();
-  const { name, description, icon, daily_limit_minutes, is_free, conditions, quest_date } = data || {};
+  const { name, description, icon, daily_limit_minutes, is_free, conditions, quest_date, repeat_type, repeat_weekday, repeat_until } = data || {};
   const questId = uuid();
 
   if (is_free) {
@@ -179,6 +183,9 @@ export function createQuest(data) {
     is_daily: 0,
     is_free: is_free ? 1 : 0,
     quest_date: quest_date || formatDate(new Date()),
+    repeat_type: repeat_type || 'none',
+    repeat_weekday: repeat_type === 'weekly' ? (repeat_weekday ?? 0) : null,
+    repeat_until: repeat_type && repeat_type !== 'none' ? (repeat_until || null) : null,
     active: 1,
     created_at: new Date().toISOString(),
   };
@@ -216,7 +223,7 @@ export function createQuest(data) {
 
 export function updateQuest(id, data) {
   const db = getDb();
-  const { name, description, icon, daily_limit_minutes, is_free, conditions } = data || {};
+  const { name, description, icon, daily_limit_minutes, is_free, conditions, repeat_type, repeat_weekday, repeat_until } = data || {};
 
   const existing = db.quests.find((q) => q.id === id);
   if (!existing) throw new Error('关卡不存在');
@@ -233,6 +240,9 @@ export function updateQuest(id, data) {
   existing.icon = icon || 'sparkles';
   existing.daily_limit_minutes = daily_limit_minutes || 30;
   existing.is_free = is_free ? 1 : 0;
+  existing.repeat_type = repeat_type || 'none';
+  existing.repeat_weekday = repeat_type === 'weekly' ? (repeat_weekday ?? 0) : null;
+  existing.repeat_until = repeat_type && repeat_type !== 'none' ? (repeat_until || null) : null;
 
   if (is_free && !wasFree) {
     db.user.free_coupons -= 1;
@@ -417,11 +427,26 @@ function syncPlansForQuest(questId) {
   }
 }
 
+// 判断关卡在某日期是否应出现：创建日当天 + 重复规则覆盖的日期
+function questOccursOnDate(q, dateStr) {
+  if (q.quest_date === dateStr) return true;
+  if (!q.repeat_type || q.repeat_type === 'none') return false;
+  const start = q.quest_date || dateStr;
+  if (dateStr < start) return false;
+  if (q.repeat_until && dateStr > q.repeat_until) return false;
+  if (q.repeat_type === 'daily') return true;
+  if (q.repeat_type === 'weekly') {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).getDay() === (q.repeat_weekday ?? 0);
+  }
+  return false;
+}
+
 function ensurePlansForDate(dateStr) {
   const db = getDb();
 
-  // 1. 每个设定在该日期的关卡生成当日计划
-  const dailyQuests = db.quests.filter((q) => q.quest_date === dateStr && q.active === 1);
+  // 1. 每个设定在该日期（含重复规则命中）的关卡生成当日计划
+  const dailyQuests = db.quests.filter((q) => q.active === 1 && questOccursOnDate(q, dateStr));
   for (const q of dailyQuests) {
     generateDailyPlan(q.id, dateStr);
   }

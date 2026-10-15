@@ -29,6 +29,7 @@ export function QuestCard({ plan, onToggleCondition, onUnlock, onEdit, onDelete 
   const StatusIcon = config.icon;
   const progress = calcProgress(conditions);
   const isToday = plan.plan_date === todayStr();
+  const isPast = plan.plan_date < todayStr();
   const canStartTimer = status === 'unlocked' && isToday;
   const allCompleted = conditions.length > 0 && conditions.every(c => c.completed);
   const TypeIcon = ICON_MAP[quest.icon] || Sparkles;
@@ -46,14 +47,16 @@ export function QuestCard({ plan, onToggleCondition, onUnlock, onEdit, onDelete 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onEdit({ ...plan.quest, conditions: plan.conditions })}
-            className="p-1.5 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg"
-            title="编辑关卡"
-          >
-            <Pencil size={14} />
-          </button>
-          {onDelete && (
+          {!isPast && (
+            <button
+              onClick={() => onEdit({ ...plan.quest, conditions: plan.conditions })}
+              className="p-1.5 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg"
+              title="编辑关卡"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+          {onDelete && !isPast && (
             <button
               onClick={() => onDelete(plan)}
               className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"

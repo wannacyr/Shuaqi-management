@@ -1,12 +1,42 @@
 import { useEffect, useState } from 'react';
 import { Plus, X, Save, Sparkles } from 'lucide-react';
 import { QUEST_TYPES, iconForType } from '../utils/questTypes';
+import { todayStr } from '../utils/date';
+
+const REPEAT_OPTIONS = [
+  { value: 'none', label: '不重复' },
+  { value: 'daily', label: '每日' },
+  { value: 'w1', label: '每周一' },
+  { value: 'w2', label: '每周二' },
+  { value: 'w3', label: '每周三' },
+  { value: 'w4', label: '每周四' },
+  { value: 'w5', label: '每周五' },
+  { value: 'w6', label: '每周六' },
+  { value: 'w0', label: '每周日' },
+];
+
+// quest 的重复字段 -> 表单下拉值
+function repeatFormValue(quest) {
+  if (!quest) return 'none';
+  if (quest.repeat_type === 'daily') return 'daily';
+  if (quest.repeat_type === 'weekly') return 'w' + (quest.repeat_weekday ?? 0);
+  return 'none';
+}
+
+// 表单下拉值 -> 提交给 store 的重复字段
+function buildRepeatPayload(value, until) {
+  if (value === 'daily') return { repeat_type: 'daily', repeat_weekday: null, repeat_until: until };
+  if (value && value.startsWith('w')) return { repeat_type: 'weekly', repeat_weekday: Number(value.slice(1)), repeat_until: until };
+  return { repeat_type: 'none', repeat_weekday: null, repeat_until: null };
+}
 
 const newEmpty = () => ({
   name: '游戏',
   description: '',
   daily_limit_minutes: 30,
   is_free: false,
+  repeat: 'none',
+  repeat_until: '',
   conditions: [{ title: '', duration_minutes: 30 }],
 });
 
@@ -22,6 +52,8 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
           description: initialQuest.description || '',
           daily_limit_minutes: initialQuest.daily_limit_minutes,
           is_free: !!initialQuest.is_free,
+          repeat: repeatFormValue(initialQuest),
+          repeat_until: initialQuest.repeat_until || '',
           conditions: initialQuest.conditions?.length
             ? initialQuest.conditions.map((c) => ({ title: c.title, duration_minutes: c.duration_minutes ?? 30 }))
             : [],
@@ -53,8 +85,23 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
     icon: iconForType(form.name),
     daily_limit_minutes: form.daily_limit_minutes,
     is_free: isFree,
+    ...buildRepeatPayload(form.repeat, form.repeat_until || null),
     conditions: isFree ? [] : form.conditions.filter((c) => c.title.trim()),
   });
+
+  // 选择了重复时必须选择结束日期，且不能早于今天
+  const validateRepeat = () => {
+    if (form.repeat === 'none') return true;
+    if (!form.repeat_until) {
+      alert('请选择重复结束的日期');
+      return false;
+    }
+    if (form.repeat_until < todayStr()) {
+      alert('重复结束日期不能早于今天');
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -63,11 +110,13 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
       alert(`请设置条件，否则将消耗自由奖励券（当前持有${freeCoupons}张）`);
       return;
     }
+    if (!validateRepeat()) return;
     const payload = buildPayload(form.is_free);
     onSave(editing ? { ...payload, id: editing } : payload);
   };
 
   const handleUseCoupon = () => {
+    if (!validateRepeat()) return;
     const payload = buildPayload(true);
     onSave(editing ? { ...payload, id: editing } : payload);
   };
@@ -123,6 +172,33 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
               onChange={(e) => setForm({ ...form, daily_limit_minutes: Number(e.target.value) })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">重复</label>
+            <select
+              value={form.repeat}
+              onChange={(e) => setForm({ ...form, repeat: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+            >
+              {REPEAT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            {form.repeat !== 'none' && (
+              <div className="mt-2">
+                <input
+                  type="date"
+                  min={todayStr()}
+                  value={form.repeat_until}
+                  onChange={(e) => setForm({ ...form, repeat_until: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                />
+                {form.repeat_until && (
+                  <p className="text-xs text-violet-600 mt-1">重复至{form.repeat_until.replace(/-/g, '/')}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
