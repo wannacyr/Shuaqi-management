@@ -147,7 +147,7 @@ export function TodayView() {
       {!loading && normalPlans.length === 0 && (
         <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
           <Sparkles className="mx-auto text-violet-400 mb-3" size={32} />
-          <h3 className="text-lg font-bold text-slate-700 mb-1">欢迎使用每日计划</h3>
+          <h3 className="text-lg font-bold text-slate-700 mb-1">开始写今天的Playbook吧</h3>
           <p className="text-sm text-slate-400 mb-6">三步开始：创建奖励关卡 → 完成前置条件 → 解锁享受时光</p>
           <div className="flex justify-center gap-3">
             <button
