@@ -16,6 +16,16 @@ const REPEAT_OPTIONS = [
   { value: 'w0', label: '每周日' },
 ];
 
+// 前置条件快捷模板：点击即添加一条预填条件
+const CONDITION_TEMPLATES = [
+  { title: '学习', duration_minutes: 30 },
+  { title: '运动', duration_minutes: 20 },
+  { title: '阅读', duration_minutes: 30 },
+  { title: '练琴', duration_minutes: 30 },
+  { title: '背单词', duration_minutes: 15 },
+  { title: '早起', duration_minutes: 10 },
+];
+
 // quest 的重复字段 -> 表单下拉值
 function repeatFormValue(quest) {
   if (!quest) return 'none';
@@ -67,6 +77,14 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
 
   const addCondition = () => {
     setForm((prev) => ({ ...prev, conditions: [...prev.conditions, { title: '', duration_minutes: 30 }] }));
+  };
+
+  // 快捷模板：清掉未填写的空白行后追加一条预填条件
+  const addTemplateCondition = (tpl) => {
+    setForm((prev) => ({
+      ...prev,
+      conditions: [...prev.conditions.filter((c) => c.title.trim()), { ...tpl }],
+    }));
   };
 
   const updateCondition = (idx, patch) => {
@@ -224,6 +242,18 @@ export function QuestDialog({ open, onClose, initialQuest, freeCoupons, onSave }
               >
                 <Plus size={14} /> 添加条件
               </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {CONDITION_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.title}
+                  type="button"
+                  onClick={() => addTemplateCondition(tpl)}
+                  className="px-2.5 py-1 text-xs bg-violet-50 text-violet-700 rounded-full hover:bg-violet-100 transition-colors"
+                >
+                  {tpl.title} {tpl.duration_minutes}分钟
+                </button>
+              ))}
             </div>
             {form.conditions.length === 0 && (
               <div className="text-sm text-slate-400 mb-2">

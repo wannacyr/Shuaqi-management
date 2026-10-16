@@ -704,3 +704,30 @@ export function importData(jsonString) {
   }
   replaceDb(data);
 }
+
+// ---------- 首次使用引导 ----------
+// 一键注入演示关卡（条件与时长已预填），仅建议在空库时调用
+export function injectDemoQuests() {
+  const today = formatDate(new Date());
+  createQuest({
+    name: '追剧',
+    description: '演示关卡：完成学习和运动，解锁 60 分钟追剧时光',
+    icon: 'video',
+    daily_limit_minutes: 60,
+    is_free: false,
+    quest_date: today,
+    conditions: [
+      { title: '学习', duration_minutes: 30 },
+      { title: '运动', duration_minutes: 20 },
+    ],
+  });
+  createQuest({
+    name: '游戏',
+    description: '演示关卡：完成阅读，解锁 45 分钟游戏时间',
+    icon: 'gamepad-2',
+    daily_limit_minutes: 45,
+    is_free: false,
+    quest_date: today,
+    conditions: [{ title: '阅读', duration_minutes: 30 }],
+  });
+}
