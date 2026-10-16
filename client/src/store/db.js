@@ -94,3 +94,9 @@ export function resetDb() {
   persist();
   return db;
 }
+
+// 整体替换数据库（导入备份用）；调用方负责结构校验，导入后需刷新页面
+export function replaceDb(data) {
+  db = data;
+  persist();
+}

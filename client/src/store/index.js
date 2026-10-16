@@ -1,7 +1,7 @@
 // 纯前端版业务逻辑：把原 server/routes + server/utils 迁移到浏览器 localStorage
 // 约定：内部辅助函数（addPoints / checkBadges 等）只改内存不落盘；
 //       顶层导出的操作函数在完成后调用 save() 一次性持久化。
-import { getDb, save, uuid } from './db.js';
+import { getDb, save, uuid, replaceDb } from './db.js';
 
 // ---------- 通用工具 ----------
 export function formatDate(date) {
@@ -674,4 +674,33 @@ export function getDailyPoints() {
   return Object.keys(map)
     .sort()
     .map((date) => ({ date, total: map[date] }));
+}
+
+// ---------- 数据备份 ----------
+// 导出全量数据为 JSON 字符串（含版本号与导出时间）
+export function exportData() {
+  return JSON.stringify(
+    { version: 1, exported_at: new Date().toISOString(), data: getDb() },
+    null,
+    2
+  );
+}
+
+// 从 JSON 字符串导入数据（整体覆盖）；校验失败抛错且不改动现有数据
+export function importData(jsonString) {
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonString);
+  } catch {
+    throw new Error('文件不是有效的 JSON');
+  }
+  const data = parsed && parsed.data ? parsed.data : parsed; // 兼容裸 db 与带包装格式
+  if (!data || typeof data !== 'object') {
+    throw new Error('备份文件格式不正确');
+  }
+  const required = ['user', 'levels', 'badges', 'quests', 'conditions', 'daily_plans', 'reward_sessions', 'point_transactions'];
+  for (const key of required) {
+    if (!(key in data)) throw new Error(`备份文件缺少必要数据：${key}`);
+  }
+  replaceDb(data);
 }

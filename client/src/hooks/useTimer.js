@@ -44,9 +44,20 @@ export function useTimer(initialSeconds, onComplete) {
     return elapsed;
   }, [elapsed]);
 
+  // 从持久化会话恢复进度：清零 interval，把已累计秒数写入 pausedElapsedRef
+  const restore = useCallback((seconds) => {
+    clearInterval(intervalRef.current);
+    const safeSeconds = Math.max(0, Math.floor(seconds));
+    pausedElapsedRef.current = safeSeconds;
+    startTimeRef.current = null;
+    setElapsed(safeSeconds);
+    setRemaining(Math.max(0, initialSeconds - safeSeconds));
+    setRunning(false);
+  }, [initialSeconds]);
+
   useEffect(() => {
     return () => clearInterval(intervalRef.current);
   }, []);
 
-  return { remaining, elapsed, running, start, pause, stop };
+  return { remaining, elapsed, running, start, pause, stop, restore };
 }

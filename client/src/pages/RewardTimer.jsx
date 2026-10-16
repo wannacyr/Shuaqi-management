@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Timer } from '../components/Timer';
 import { useTimer } from '../hooks/useTimer';
 import { useQuest } from '../context/QuestContext';
 import { useUser } from '../context/UserContext';
 import * as rewardSessionApi from '../api/rewardSessions';
+import { loadTimerSession, saveTimerSession, clearTimerSession, sessionElapsed } from '../utils/timerSession';
 import { ArrowLeft, Trophy } from 'lucide-react';
 
 export function RewardTimer() {
@@ -31,6 +32,7 @@ export function RewardTimer() {
     if (!plan || elapsedSeconds <= 0) return;
     try {
       const res = await rewardSessionApi.createRewardSession(plan.id, elapsedSeconds);
+      clearTimerSession();
       setResult(res);
       setFinished(true);
       await refreshDailyPlans();
@@ -41,7 +43,7 @@ export function RewardTimer() {
     }
   };
 
-  const { remaining, elapsed, running, start, pause, stop } = useTimer(
+  const { remaining, elapsed, running, start, pause, stop, restore } = useTimer(
     totalSeconds,
     handleComplete
   );
@@ -57,6 +59,7 @@ export function RewardTimer() {
       pause();
       try {
         await rewardSessionApi.recordRewardUsage(plan.id, elapsed);
+        clearTimerSession();
         await refreshDailyPlans();
       } catch (err) {
         console.error(err);
@@ -64,6 +67,47 @@ export function RewardTimer() {
     }
     navigate('/');
   };
+
+  // 恢复上次未完成的计时会话（plan 就绪后只执行一次）
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (!plan || restoredRef.current || totalSeconds <= 0) return;
+    restoredRef.current = true;
+    const session = loadTimerSession();
+    if (!session) return;
+    if (session.planId !== plan.id) {
+      // 旧关卡遗留的未落库时长：补记到旧 plan，避免丢数据
+      const oldElapsed = sessionElapsed(session);
+      clearTimerSession();
+      if (oldElapsed > 0) {
+        rewardSessionApi
+          .recordRewardUsage(session.planId, oldElapsed)
+          .then(() => refreshDailyPlans())
+          .catch(() => {});
+      }
+      return;
+    }
+    const restored = Math.min(sessionElapsed(session), totalSeconds);
+    if (restored >= totalSeconds) {
+      // 离开期间时长已耗尽 → 直接走完成流程
+      clearTimerSession();
+      handleComplete(totalSeconds);
+      return;
+    }
+    restore(restored);
+    if (session.lastStartAt) start(); // 离开时在计时 → 自动继续
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, totalSeconds, restore, start, refreshDailyPlans]);
+
+  // 实时持久化计时会话：elapsed 每秒变化触发写入；暂停/切页/关闭前最后一次 tick 已覆盖
+  useEffect(() => {
+    if (!plan) return;
+    saveTimerSession({
+      planId: plan.id,
+      elapsedBase: elapsed,
+      lastStartAt: running ? Date.now() : null,
+    });
+  }, [plan, elapsed, running]);
 
   if (!plan) {
     return (

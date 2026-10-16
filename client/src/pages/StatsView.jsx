@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { LevelBadge } from '../components/LevelBadge';
 import { PointsDisplay } from '../components/PointsDisplay';
 import { getTransactions } from '../api/points';
+import { exportData, importData } from '../store';
 import { Trophy, Ticket, ChevronRight } from 'lucide-react';
 
 export function StatsView() {
@@ -22,6 +23,38 @@ export function StatsView() {
     } catch (err) {
       alert(err.response?.data?.error || '兑换失败');
     }
+  };
+
+  const fileInputRef = useRef(null);
+
+  // 导出全量数据为 JSON 文件下载
+  const handleExport = () => {
+    const json = exportData();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `daily-playbook-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // 选择备份文件 → 确认覆盖 → 导入并刷新
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        if (!window.confirm('导入将覆盖当前全部数据，且无法撤销。确定继续吗？')) return;
+        importData(String(reader.result));
+        location.reload();
+      } catch (err) {
+        alert(err.message || '导入失败，请检查备份文件');
+      }
+    };
+    reader.readAsText(file);
   };
 
   const recentBadges = (user?.badges || []).slice(0, 3);
@@ -104,6 +137,32 @@ export function StatsView() {
           <Link to="/points" className="flex items-center gap-1 text-sm text-violet-600 hover:text-violet-700">
             更多 <ChevronRight size={16} />
           </Link>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <h3 className="font-bold text-slate-800 mb-2">数据管理</h3>
+        <p className="text-xs text-slate-400 mb-3">数据仅保存在本浏览器，清除缓存会丢失，建议定期导出备份</p>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+          >
+            导出备份
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-4 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+          >
+            导入备份
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleImport}
+          />
         </div>
       </div>
     </div>
