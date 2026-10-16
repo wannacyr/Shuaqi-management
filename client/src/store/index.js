@@ -601,6 +601,40 @@ export function createRewardSession(dailyPlanId, durationSeconds) {
   };
 }
 
+// 暂停返回时累计已享受时长：只记录时长（used_seconds 随之更新），不结算积分、不改变计划状态
+export function recordRewardUsage(dailyPlanId, durationSeconds) {
+  const db = getDb();
+  if (!dailyPlanId || !durationSeconds || durationSeconds <= 0) return null;
+
+  const plan = db.daily_plans.find((p) => p.id === dailyPlanId);
+  if (!plan) throw new Error('计划不存在');
+  const quest = db.quests.find((q) => q.id === plan.quest_id);
+  if (!quest) throw new Error('关卡不存在');
+
+  const usedSeconds = db.reward_sessions
+    .filter((rs) => rs.daily_plan_id === dailyPlanId)
+    .reduce((sum, rs) => sum + (rs.duration_seconds || 0), 0);
+  const remainingSeconds = Math.max(0, quest.daily_limit_minutes * 60 - usedSeconds);
+  const actualSeconds = Math.min(Math.floor(durationSeconds), remainingSeconds);
+  if (actualSeconds <= 0) return null;
+
+  const now = new Date();
+  const startedAt = new Date(now.getTime() - actualSeconds * 1000);
+  db.reward_sessions.push({
+    id: uuid(),
+    daily_plan_id: dailyPlanId,
+    started_at: startedAt.toISOString(),
+    ended_at: now.toISOString(),
+    duration_seconds: actualSeconds,
+    earned_points: 0,
+  });
+
+  db.user.total_reward_minutes += Math.floor(actualSeconds / 60);
+  save();
+
+  return { used_seconds: usedSeconds + actualSeconds, remaining_seconds: remainingSeconds - actualSeconds };
+}
+
 export function listRewardSessions(date) {
   const db = getDb();
   let rows;

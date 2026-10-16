@@ -51,6 +51,20 @@ export function RewardTimer() {
     await handleComplete(elapsedSeconds);
   };
 
+  // 暂停/进行中返回：把本次已享受时长落库（不结算积分），保持可休息时长连续
+  const handleBack = async () => {
+    if (elapsed > 0) {
+      pause();
+      try {
+        await rewardSessionApi.recordRewardUsage(plan.id, elapsed);
+        await refreshDailyPlans();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    navigate('/');
+  };
+
   if (!plan) {
     return (
       <div className="text-center py-12 text-slate-400">
@@ -83,7 +97,7 @@ export function RewardTimer() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <button
-        onClick={() => navigate('/')}
+        onClick={handleBack}
         className="flex items-center gap-1 text-slate-500 hover:text-slate-700"
       >
         <ArrowLeft size={16} /> 返回

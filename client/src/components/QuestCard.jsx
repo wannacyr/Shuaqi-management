@@ -1,7 +1,7 @@
 import { Lock, Unlock, CheckCircle, Play, Trophy, Sparkles, Pencil, Trash2, Gamepad2, Video, Dumbbell, Coffee, Tv, Film, ShoppingBag, Footprints } from 'lucide-react';
 import { ProgressBar } from './ProgressBar';
 import { ConditionItem } from './ConditionItem';
-import { calcProgress } from '../utils/calc';
+import { calcProgress, formatDuration } from '../utils/calc';
 import { todayStr } from '../utils/date';
 import { Link } from 'react-router-dom';
 
@@ -30,7 +30,8 @@ export function QuestCard({ plan, onToggleCondition, onUnlock, onEdit, onDelete 
   const progress = calcProgress(conditions);
   const isToday = plan.plan_date === todayStr();
   const isPast = plan.plan_date < todayStr();
-  const canStartTimer = status === 'unlocked' && isToday;
+  const remainingSeconds = Math.max(0, quest.daily_limit_minutes * 60 - (used_seconds || 0));
+  const canStartTimer = status === 'unlocked' && isToday && remainingSeconds > 0;
   const allCompleted = conditions.length > 0 && conditions.every(c => c.completed);
   const TypeIcon = ICON_MAP[quest.icon] || Sparkles;
 
@@ -110,7 +111,7 @@ export function QuestCard({ plan, onToggleCondition, onUnlock, onEdit, onDelete 
 
       <div className="flex items-center justify-between">
         <div className="text-xs text-slate-500">
-          时长 {quest.daily_limit_minutes} 分钟 · 已享受 {Math.floor((used_seconds || 0) / 60)} 分钟
+          时长 {quest.daily_limit_minutes} 分钟 · 可休息 {formatDuration(remainingSeconds)} · 已享受 {formatDuration(used_seconds || 0)}
         </div>
         <div className="flex gap-2">
           {status === 'locked' && allCompleted && isToday && (
@@ -127,7 +128,7 @@ export function QuestCard({ plan, onToggleCondition, onUnlock, onEdit, onDelete 
               className="px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 flex items-center gap-1"
             >
               <Play size={14} />
-              开始享受
+              {(used_seconds || 0) > 0 ? '继续享受' : '开始享受'}
             </Link>
           )}
         </div>
