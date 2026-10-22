@@ -8,7 +8,7 @@ import { useUser } from '../context/UserContext';
 import { todayStr } from '../utils/date';
 import { Sparkles, Plus } from 'lucide-react';
 import { listQuests } from '../api/quests';
-import { injectDemoQuests } from '../store';
+import { injectDemoQuests, awardOops } from '../store';
 
 export function TodayView() {
   const { dailyPlans, loading, refreshDailyPlans, toggleCondition, unlockPlan, saveQuest, removeQuest } = useQuest();
@@ -41,8 +41,9 @@ export function TodayView() {
     }
   };
 
-  // 等下，我手滑了：不勾选刚才的条件，退回弹出前界面
+  // 等下，我手滑了：不勾选刚才的条件，退回弹出前界面（触发隐藏成就「Oops」）
   const handleConfirmOops = () => {
+    awardOops();
     setPendingComplete(null);
   };
 

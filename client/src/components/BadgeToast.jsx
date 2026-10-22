@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { badgeIcon } from '../utils/badgeIcons';
 
 const CONFETTI_COLORS = ['#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#eab308'];
 
@@ -41,6 +41,8 @@ export function BadgeToast() {
 
   if (!current) return null;
 
+  const Icon = badgeIcon(current.icon);
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 pointer-events-none">
       <div className="relative pointer-events-auto bg-white rounded-2xl shadow-2xl border border-amber-100 px-8 py-5 text-center space-y-1.5 toast-pop">
@@ -60,7 +62,7 @@ export function BadgeToast() {
           ))}
         </div>
         <div className="w-12 h-12 mx-auto bg-amber-100 rounded-full flex items-center justify-center">
-          <Trophy size={24} className="text-amber-500" />
+          <Icon size={24} className="text-amber-500" />
         </div>
         <p className="text-base font-bold text-slate-800">获得徽章「{current.name}」</p>
         {current.description && <p className="text-xs text-slate-500">{current.description}</p>}

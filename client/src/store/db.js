@@ -35,6 +35,26 @@ function seedData() {
       { id: 'weekly_streak', name: '七日连击', description: '连续 7 天完成至少一个前置条件', icon: 'flame', condition_type: 'weekly_streak' },
       { id: 'reward_10h', name: '沉浸十小时', description: '累计享受奖励达到 10 小时', icon: 'clock', condition_type: 'reward_10h' },
       { id: 'coupon_collector', name: '自由兑换者', description: '兑换过自由奖励券', icon: 'ticket', condition_type: 'coupon_collector' },
+      // ---- 常规成就（新增） ----
+      { id: 'first_condition', name: '初试锋芒', description: '首次完成一个前置条件', icon: 'target', condition_type: 'first_condition' },
+      { id: 'conditions_10', name: '条件猎手', description: '累计完成 10 个前置条件', icon: 'dumbbell', condition_type: 'conditions_10' },
+      { id: 'conditions_50', name: '习惯养成', description: '累计完成 50 个前置条件', icon: 'brick-wall', condition_type: 'conditions_50' },
+      { id: 'conditions_100', name: '百炼成钢', description: '累计完成 100 个前置条件', icon: 'swords', condition_type: 'conditions_100' },
+      { id: 'first_plan_complete', name: '首次通关', description: '首次完成整个奖励关卡', icon: 'flag', condition_type: 'first_plan_complete' },
+      { id: 'plans_5', name: '五关斩将', description: '累计完成 5 个奖励关卡', icon: 'hand', condition_type: 'plans_5' },
+      { id: 'plans_10', name: '十关连破', description: '累计完成 10 个奖励关卡', icon: 'medal', condition_type: 'plans_10' },
+      { id: 'points_200', name: '小有积蓄', description: '累计获得 200 积分', icon: 'coins', condition_type: 'points_200' },
+      { id: 'points_1000', name: '积分富翁', description: '累计获得 1000 积分', icon: 'gem', condition_type: 'points_1000' },
+      { id: 'reward_30h', name: '沉浸三十时', description: '累计享受奖励达到 30 小时', icon: 'hourglass', condition_type: 'reward_30h' },
+      { id: 'perfect_day', name: '完美一天', description: '当天所有奖励关卡全部完成', icon: 'star', condition_type: 'perfect_day' },
+      // ---- 隐藏成就（获得前显示 ???） ----
+      { id: 'night_owl', name: '夜猫子', description: '晚上 23 点后完成一个前置条件', icon: 'moon', condition_type: 'night_owl', hidden: true },
+      { id: 'early_bird', name: '早起鸟', description: '早上 7 点前完成一个前置条件', icon: 'sunrise', condition_type: 'early_bird', hidden: true },
+      { id: 'unlock_3_day', name: '摸鱼大师', description: '同一天解锁 3 个及以上奖励关卡', icon: 'fish', condition_type: 'unlock_3_day', hidden: true },
+      { id: 'coupon_hoarder', name: '囤券达人', description: '同时持有 5 张及以上自由奖励券', icon: 'tickets', condition_type: 'coupon_hoarder', hidden: true },
+      { id: 'lazy_day', name: '一日躺平', description: '同一天解锁的 3 个及以上关卡全部使用自由奖励券', icon: 'sofa', condition_type: 'lazy_day', hidden: true },
+      { id: 'nice_try', name: 'Nice try', description: '没有自由奖励券时创建了一个无条件的奖励关卡', icon: 'laugh', condition_type: 'nice_try', hidden: true },
+      { id: 'oops', name: 'Oops', description: '在最后一项条件的确认卡上点了「等下，我手滑了」', icon: 'undo-2', condition_type: 'oops', hidden: true },
     ],
     user_badges: [],
     quests: [],
@@ -71,6 +91,20 @@ let db = load();
 if (!db) {
   db = seedData();
   persist();
+} else {
+  // 老库升级：补录后续版本新增的徽章定义（不清空已获得的徽章记录）
+  const seed = seedData();
+  if (!Array.isArray(db.badges)) db.badges = [];
+  if (!Array.isArray(db.user_badges)) db.user_badges = [];
+  const knownIds = new Set(db.badges.map((b) => b.id));
+  let migrated = false;
+  for (const b of seed.badges) {
+    if (!knownIds.has(b.id)) {
+      db.badges.push(b);
+      migrated = true;
+    }
+  }
+  if (migrated) persist();
 }
 
 function persist() {

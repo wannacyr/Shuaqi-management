@@ -60,6 +60,26 @@ function checkLevelUp() {
 }
 
 // ---------- 徽章 ----------
+// 计数辅助：累计完成的前置条件数
+function countCompletedConditions() {
+  return getDb().condition_completions.filter((cc) => cc.completed === 1).length;
+}
+
+// 计数辅助：累计完成的奖励关卡数（不含奖励池顺延计划）
+function countCompletedPlans() {
+  const db = getDb();
+  return db.daily_plans.filter((p) => p.status === 'completed' && !p.is_reward_pool).length;
+}
+
+// 当日已解锁/已完成的非奖励池计划
+function todayUnlockedPlans() {
+  const db = getDb();
+  const todayStr = formatDate(new Date());
+  return db.daily_plans.filter(
+    (p) => p.plan_date === todayStr && !p.is_reward_pool && (p.status === 'unlocked' || p.status === 'completed')
+  );
+}
+
 function hasWeeklyStreak() {
   const db = getDb();
   const today = new Date();
@@ -82,14 +102,62 @@ function checkBadges(eventType) {
   const earnedIds = db.user_badges.map((b) => b.badge_id);
   for (const badge of db.badges) {
     if (earnedIds.includes(badge.id)) continue;
+    const t = badge.condition_type;
     let awarded = false;
-    if (badge.condition_type === 'first_unlock' && eventType === 'unlock') {
+    if (t === 'first_unlock' && eventType === 'unlock') {
       awarded = true;
-    } else if (badge.condition_type === 'weekly_streak' && eventType === 'daily_check') {
+    } else if (t === 'weekly_streak' && eventType === 'daily_check') {
       awarded = hasWeeklyStreak();
-    } else if (badge.condition_type === 'reward_10h' && db.user.total_reward_minutes >= 600) {
+    } else if (t === 'reward_10h' && db.user.total_reward_minutes >= 600) {
       awarded = true;
-    } else if (badge.condition_type === 'coupon_collector' && eventType === 'coupon_redeem') {
+    } else if (t === 'coupon_collector' && eventType === 'coupon_redeem') {
+      awarded = true;
+    // ---- 常规新增 ----
+    } else if (t === 'first_condition' && eventType === 'condition_done') {
+      awarded = countCompletedConditions() >= 1;
+    } else if (t === 'conditions_10' && countCompletedConditions() >= 10) {
+      awarded = true;
+    } else if (t === 'conditions_50' && countCompletedConditions() >= 50) {
+      awarded = true;
+    } else if (t === 'conditions_100' && countCompletedConditions() >= 100) {
+      awarded = true;
+    } else if (t === 'first_plan_complete' && eventType === 'reward') {
+      awarded = countCompletedPlans() >= 1;
+    } else if (t === 'plans_5' && countCompletedPlans() >= 5) {
+      awarded = true;
+    } else if (t === 'plans_10' && countCompletedPlans() >= 10) {
+      awarded = true;
+    } else if (t === 'points_200' && db.user.total_points >= 200) {
+      awarded = true;
+    } else if (t === 'points_1000' && db.user.total_points >= 1000) {
+      awarded = true;
+    } else if (t === 'reward_30h' && db.user.total_reward_minutes >= 1800) {
+      awarded = true;
+    } else if (t === 'perfect_day' && eventType === 'reward') {
+      const todayStr = formatDate(new Date());
+      const plans = db.daily_plans.filter((p) => p.plan_date === todayStr && !p.is_reward_pool);
+      awarded = plans.length > 0 && plans.every((p) => p.status === 'completed');
+    // ---- 隐藏成就 ----
+    } else if (t === 'night_owl' && eventType === 'condition_done') {
+      awarded = new Date().getHours() >= 23;
+    } else if (t === 'early_bird' && eventType === 'condition_done') {
+      awarded = new Date().getHours() < 7;
+    } else if (t === 'unlock_3_day' && eventType === 'unlock') {
+      awarded = todayUnlockedPlans().length >= 3;
+    } else if (t === 'coupon_hoarder' && db.user.free_coupons >= 5) {
+      awarded = true;
+    } else if (t === 'lazy_day' && eventType === 'unlock') {
+      const plans = todayUnlockedPlans();
+      awarded = plans.length >= 3 && plans.every((p) => {
+        const q = db.quests.find((qq) => qq.id === p.quest_id);
+        return !!q && q.is_free === 1;
+      });
+    } else if (t === 'nice_try' && eventType === 'quest_create') {
+      const latest = db.quests[db.quests.length - 1];
+      if (latest && !latest.is_free && db.user.free_coupons <= 0) {
+        awarded = !db.conditions.some((c) => c.quest_id === latest.id);
+      }
+    } else if (t === 'oops' && eventType === 'oops') {
       awarded = true;
     }
     if (awarded) {
@@ -97,7 +165,7 @@ function checkBadges(eventType) {
       addPoints('badge', 20, `获得徽章：${badge.name}`, badge.id);
       // 通知前端弹出徽章激励卡（BadgeToast 监听此事件）
       window.dispatchEvent(new CustomEvent('rewardquest:badge-earned', {
-        detail: { name: badge.name, description: badge.description, points: 20 },
+        detail: { name: badge.name, description: badge.description, points: 20, icon: badge.icon, hidden: !!badge.hidden },
       }));
     }
   }
@@ -217,6 +285,7 @@ export function createQuest(data) {
     });
   }
 
+  checkBadges('quest_create');
   save();
   return loadQuestWithConditions(questId);
 }
@@ -510,6 +579,7 @@ export function toggleCondition(planId, conditionId) {
 
   if (newCompleted) {
     addPoints('unlock', points, `完成条件：${condition.title}`, conditionId);
+    checkBadges('condition_done');
   } else {
     addPoints('unlock', -points, `取消条件：${condition.title}`, conditionId);
   }
@@ -730,4 +800,19 @@ export function injectDemoQuests() {
     quest_date: today,
     conditions: [{ title: '阅读', duration_minutes: 30 }],
   });
+}
+
+// ---------- 隐藏成就专用触发 ----------
+// 「Oops」：最后一项条件的确认卡上点了「等下，我手滑了」
+export function awardOops() {
+  checkBadges('oops');
+  save();
+}
+
+// 全量徽章列表（含未获得），供成就页展示用
+export function listAllBadges() {
+  const db = getDb();
+  const earnedAt = {};
+  for (const ub of db.user_badges) earnedAt[ub.badge_id] = ub.awarded_at;
+  return db.badges.map((b) => ({ ...b, awarded_at: earnedAt[b.id] || null }));
 }
