@@ -2,6 +2,7 @@
 import {
   Trophy, Flame, Clock, Ticket, Target, Dumbbell, BrickWall, Swords, Flag, Hand,
   Medal, Coins, Gem, Hourglass, Star, Moon, Sunrise, Fish, Tickets, Sofa, Laugh, Undo2, Sparkles,
+  ShoppingBag, Gamepad2, Film,
 } from 'lucide-react';
 
 const BADGE_ICON_MAP = {
@@ -27,6 +28,9 @@ const BADGE_ICON_MAP = {
   sofa: Sofa,
   laugh: Laugh,
   'undo-2': Undo2,
+  'shopping-bag': ShoppingBag,
+  'gamepad-2': Gamepad2,
+  film: Film,
 };
 
 export function badgeIcon(name) {

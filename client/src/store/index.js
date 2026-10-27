@@ -80,6 +80,22 @@ function todayUnlockedPlans() {
   );
 }
 
+// 当日某类关卡的累计享受时长（秒）；matcher(quest) 判定关卡是否属于该类
+// 时长按 session 所属计划的 plan_date 归入「当天」
+function todayTypeSeconds(matcher) {
+  const db = getDb();
+  const todayStr = formatDate(new Date());
+  let total = 0;
+  for (const rs of db.reward_sessions) {
+    const plan = db.daily_plans.find((p) => p.id === rs.daily_plan_id);
+    if (!plan || plan.plan_date !== todayStr) continue;
+    const quest = db.quests.find((q) => q.id === plan.quest_id);
+    if (!quest) continue;
+    if (matcher(quest)) total += rs.duration_seconds || 0;
+  }
+  return total;
+}
+
 function hasWeeklyStreak() {
   const db = getDb();
   const today = new Date();
@@ -157,6 +173,12 @@ function checkBadges(eventType) {
       if (latest && !latest.is_free && db.user.free_coupons <= 0) {
         awarded = !db.conditions.some((c) => c.quest_id === latest.id);
       }
+    } else if (t === 'shopping_5h' && eventType === 'reward') {
+      awarded = todayTypeSeconds((q) => q.icon === 'shopping-bag' || /购物|买/.test(q.name || '')) >= 18000;
+    } else if (t === 'gaming_5h' && eventType === 'reward') {
+      awarded = todayTypeSeconds((q) => q.icon === 'gamepad-2' || /游戏|电动|game/i.test(q.name || '')) >= 18000;
+    } else if (t === 'movie_5h' && eventType === 'reward') {
+      awarded = todayTypeSeconds((q) => q.icon === 'film' || /电影|film/i.test(q.name || '')) >= 18000;
     } else if (t === 'oops' && eventType === 'oops') {
       awarded = true;
     }
@@ -700,6 +722,7 @@ export function recordRewardUsage(dailyPlanId, durationSeconds) {
   });
 
   db.user.total_reward_minutes += Math.floor(actualSeconds / 60);
+  checkBadges('reward');
   save();
 
   return { used_seconds: usedSeconds + actualSeconds, remaining_seconds: remainingSeconds - actualSeconds };
