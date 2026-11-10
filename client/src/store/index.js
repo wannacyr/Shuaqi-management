@@ -548,14 +548,17 @@ function ensurePlansForDate(dateStr) {
     syncPlanConditions(p.id);
   }
 
-  // 3. 昨日未完成（locked / unlocked）的关卡顺延到今日奖励池，状态维持昨日 dayend 状态
-  const yesterday = new Date(dateStr);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yestStr = formatDate(yesterday);
-  const unfinishedPlans = db.daily_plans.filter(
-    (p) => p.plan_date === yestStr && (p.status === 'locked' || p.status === 'unlocked')
-  );
-  for (const srcPlan of unfinishedPlans) {
+  // 3. 未完成（locked / unlocked）的关卡顺延到今日奖励池，状态维持最近一次 dayend 状态
+  //    取每个关卡在今天之前最新的一份未完成计划：即使中间几天没打开应用（没有生成计划），
+  //    也能从最近一次有记录的日期顺延过来，不再只依赖「昨天」
+  const latestUnfinishedByQuest = {};
+  for (const p of db.daily_plans) {
+    if (p.plan_date >= dateStr) continue;
+    if (p.status !== 'locked' && p.status !== 'unlocked') continue;
+    const prev = latestUnfinishedByQuest[p.quest_id];
+    if (!prev || p.plan_date > prev.plan_date) latestUnfinishedByQuest[p.quest_id] = p;
+  }
+  for (const srcPlan of Object.values(latestUnfinishedByQuest)) {
     const existing = db.daily_plans.find((p) => p.quest_id === srcPlan.quest_id && p.plan_date === dateStr);
     if (existing) continue;
     const newPlanId = generateDailyPlan(srcPlan.quest_id, dateStr, true);
